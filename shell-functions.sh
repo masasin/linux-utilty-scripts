@@ -58,3 +58,8 @@ EOF
   # 5. Create the Final Function:
   eval "${function_name}() { ${function_body}; }"
 }
+
+# Prints the logical path to a file/directory without expanding symlinks.
+function logpath() {
+  printf '%s/%s\n' "$PWD" "$1"
+}
