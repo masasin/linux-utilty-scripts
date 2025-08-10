@@ -1,7 +1,7 @@
 #!/bin/bash
 
 input="$1"
-suffix="$2:-letter"
+suffix="${2:-letter}"
 
 # Check if input file is provided and exists
 if [[ -z "$input" || ! -f "$input" ]]; then
