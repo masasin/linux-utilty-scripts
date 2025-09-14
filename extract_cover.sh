@@ -18,4 +18,4 @@ output="${basename}_${suffix}.pdf"
 # Run pdftk to extract the first page
 pdftk "$input" cat 1 output "$output"
 
-echo "First page saved to: $output"
+echo "$output"
