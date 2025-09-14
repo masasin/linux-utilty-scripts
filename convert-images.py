@@ -73,7 +73,7 @@ class ImageConversionApp(App):
 
     def compose(self) -> ComposeResult:
         """Create and arrange the widgets for the application."""
-        yield Header()
+        yield Header(show_clock=True)
         with Vertical(id="main_container"):
             yield Static("Drag and drop image files here", id="drop_zone")
             yield Select[str](
