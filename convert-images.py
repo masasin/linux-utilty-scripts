@@ -16,7 +16,7 @@ from textual.app import App, ComposeResult
 from textual.containers import HorizontalGroup, Vertical
 from textual.events import Paste
 from textual.reactive import reactive
-from textual.widgets import Button, Footer, Header, RichLog, Select, Static
+from textual.widgets import Button, Footer, Header, RichLog, Select, Label
 from textual_fspicker import SelectDirectory
 
 
@@ -75,7 +75,7 @@ class ImageConversionApp(App):
         """Create and arrange the widgets for the application."""
         yield Header(show_clock=True)
         with Vertical(id="main_container"):
-            yield Static("Drag and drop image files here", id="drop_zone")
+            yield Label("Drag and drop image files here", id="drop_zone")
             yield Select[str](
                 [
                     ("PNG", "png"),
@@ -88,7 +88,7 @@ class ImageConversionApp(App):
                 id="format_select",
             )
 
-            yield Static(
+            yield Label(
                 f"Output directory: {self.output_dir}",
                 id="output_dir_str",
             )
@@ -205,7 +205,7 @@ class ImageConversionApp(App):
         log.write("\n[bold]Conversion process finished.[/]")
 
     def watch_output_dir(self, old_dir: Path, new_dir: Path):
-        self.query_one("#output_dir_str", Static).update(
+        self.query_one("#output_dir_str", Label).update(
             f"Output directory: {self.output_dir}"
         )
 
