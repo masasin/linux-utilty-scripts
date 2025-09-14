@@ -7,6 +7,13 @@
 ## Shell functions
 
 These functions need to be sourced into the `.profile` or `.bashrc` etc.
+I am doing it by sourcing from `~/.local/lib/shell-functions.sh` if that exists, so soft-link it there:
+
+```bash
+cd ~/.local/lib
+ln -s <path/to/this/folder/shell-functions.sh> .
+
+```
 
 - `create_shell_wrapper`: Generate a new shell function from an existing script or function. `eval`s output prefixed with `EVAL::`, or prints it verbatim otherwise.
 - `logpath`: Find the logical path of a file, without expanding symlinks. Useful for linking to files in a note taking application.
