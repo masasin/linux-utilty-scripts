@@ -8,6 +8,7 @@
 
 import shlex
 import subprocess
+from collections import deque
 from pathlib import Path
 
 from textual import on, work
@@ -55,12 +56,20 @@ class ImageConversionApp(App):
     }
     """
 
-    BINDINGS = [("q", "quit", "Quit App")]
+    BINDINGS = [
+        ("q", "quit", "Quit App"),
+        ("d", "toggle_dark_mode", "Toggle dark mode"),
+    ]
     output_dir = reactive(Path.cwd(), init=False)
 
     def __init__(self) -> None:
         super().__init__()
         self.dropped_files: set[str] = set()
+        self._themes = deque(["textual-dark", "textual-light"])
+
+    def on_mount(self):
+        self.title  = "Image Converter"
+        self.theme = self._themes[0]
 
     def compose(self) -> ComposeResult:
         """Create and arrange the widgets for the application."""
@@ -199,6 +208,10 @@ class ImageConversionApp(App):
         self.query_one("#output_dir_str", Static).update(
             f"Output directory: {self.output_dir}"
         )
+
+    def action_toggle_dark_mode(self):
+        self._themes.rotate()
+        self.theme = self._themes[0]
 
 
 if __name__ == "__main__":
