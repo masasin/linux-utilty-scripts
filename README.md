@@ -4,6 +4,9 @@
 - `extract-cover`: Extract the first page (e.g., cover letter) from a pdf, and save it as `filename_letter.pdf` or specify another suffix.
 - `dcr`: `run` a new docker container if it is not running, or `exec` into the running instance 
 
+## Terminal UIs
+- `convert-images`: Convert images from any format to png, jpeg, webp, or gif. Requires ImageMagick to be installed.
+
 ## Shell functions
 
 These functions need to be sourced into the `.profile` or `.bashrc` etc.
