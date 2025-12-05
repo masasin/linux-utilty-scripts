@@ -5,31 +5,24 @@
 #          run-or-raise brave-browser Brave-browser
 #          run-or-raise alacritty
 
-#!/bin/bash
-
+# $1: The launch command (now REQUIRED to be the Desktop File ID, e.g., 'brave-browser')
+# $2: The class to search (defaults to $1)
 LAUNCH_CMD="$1"
 CLASS_PART="${2:-$1}"
 
 if [ -z "$LAUNCH_CMD" ]; then
-  echo "Usage: $0 <launch_command> [classpart]"
+  echo "Usage: $0 <desktop_file_id> [classpart]"
   exit 1
 fi
 
-WIN_ID=$(wmctrl -lx | awk -v class="$CLASS_PART" '
-    {
-        split($3, a, ".")
-        lc_class = tolower(class)
-        lc_a1 = tolower(a[1])
-        lc_a2 = tolower(a[2])
-        if (lc_a1 == lc_class || lc_a2 == lc_class) {
-            print $1
-            exit
-        }
-    }
-')
+# 1. Search for the window ID using the class property.
+WIN_ID=$(kdotool search --class "$CLASS_PART" 2>/dev/null | head -n 1)
 
 if [ -n "$WIN_ID" ]; then
-  wmctrl -ia "$WIN_ID"
+  # 2. Activate the found window.
+  kdotool windowactivate "$WIN_ID"
 else
-  $LAUNCH_CMD &
+  # 3. Launch the application using the KDE application launcher.
+  # --application is the correct syntax confirmed by your analysis and the KDE bug tracker.
+  kstart --application "$LAUNCH_CMD"
 fi
