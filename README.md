@@ -3,13 +3,41 @@
 - `run-or-raise`: Switch to an open window, or open the app if it's closed. Useful for keyboard shortcuts.
 - `extract-cover`: Extract the first page (e.g., cover letter) from a pdf, and save it as `filename_letter.pdf` or specify another suffix.
 - `dcr`: `run` a new docker container if it is not running, or `exec` into the running instance 
-- `bt-switch`: Switch Bluetooth devices between devices connected via SSH, such as on a local network or a Tailnet.
+- `bt-switch`: Switch Bluetooth devices between computers connected via SSH, such as on a local network or a Tailnet.
+
+  This needs to go in your `~/.config/bt_switch/config.toml`:
+
+```toml
+[devices.device-slug]
+mac = "00:00:00:00:00:00"
+name = "Device Name"
+
+[hosts.host-1]
+address = "host-1"
+user = "username1"
+protocol = "ssh"
+
+[hosts.host-2]
+address = "host-2"
+user = "username2"
+protocol = "ssh"
+
+[defaults.host-1]
+default_device = "device-slug"
+default_target = "host-2"
+
+[defaults.host-2]
+default_device = "device-slug"
+default_target = "host-1"
+```
+
 
 ## Terminal UIs
 - `convert-images`: Convert images from any format to png, jpeg, webp, or gif. Requires ImageMagick to be installed.
 
 ## URI Protocols
 - `obsidian-silent`: Takes basic Obsidian `advanced-uri` commands and applies them via the Local REST API to avoid having Obsidian steal focus.
+
   Add a desktop file pointing to `obsidian-silent`, then register it with `update-desktop-database ~/.local/share/applications`
 
 ```toml

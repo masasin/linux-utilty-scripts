@@ -1,120 +1,182 @@
-#!/usr/bin/env python3
-import argparse
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.13"
+# dependencies = [
+#     "cyclopts",
+#     "loguru",
+#     "platformdirs",
+#     "pydantic",
+# ]
+# ///
+
+import os
 import socket
 import subprocess
 import sys
+import tomllib
+from pathlib import Path
+from typing import Literal
 
-HEADPHONES_MAC = "00:00:00:00:00:00"
-HEADPHONES_NAME = "BlueTooth Headphones"
+from cyclopts import App
+from loguru import logger
+from platformdirs import user_config_path
+from pydantic import BaseModel, ValidationError
 
-DEFAULT_PEERS = {
-    "peer-1": "peer-2",
-    "peer-2": "peer-1",
-}
+class Device(BaseModel):
+    mac: str
+    name: str
 
-class BluetoothService:
-    def run_command(self, cmd: list[str], timeout: int = 5) -> str:
+class Host(BaseModel):
+    address: str
+    user: str
+    protocol: Literal["ssh"]
+
+class DefaultSettings(BaseModel):
+    default_device: str
+    default_target: str
+
+class AppConfig(BaseModel):
+    devices: dict[str, Device]
+    hosts: dict[str, Host]
+    defaults: dict[str, DefaultSettings]
+
+class BluetoothController:
+    def __init__(self, config: AppConfig):
+        self.config = config
+        self.hostname = socket.gethostname()
+        self.logger = logger.bind(host=self.hostname)
+        self._env = os.environ.copy()
+        self._env["LC_ALL"] = "C"
+
+    def _get_runner(self, target_host_alias: str) -> list[str]:
+        if target_host_alias == self.hostname:
+            return []
+        
+        if target_host_alias not in self.config.hosts:
+            self.logger.error(f"Host alias '{target_host_alias}' not found in config.")
+            sys.exit(1)
+
+        host_cfg = self.config.hosts[target_host_alias]
+        return [
+            "ssh",
+            "-o", "ConnectTimeout=5",
+            "-o", "LogLevel=ERROR",
+            f"{host_cfg.user}@{host_cfg.address}"
+        ]
+
+    def run_bluetoothctl(self, target_host_alias: str, args: list[str], timeout: int = 10) -> bool:
+        runner = self._get_runner(target_host_alias)
+        cmd = runner + ["bluetoothctl", *args]
+        
+        try:
+            result = subprocess.run(
+                cmd, 
+                capture_output=True, 
+                text=True, 
+                check=False,
+                timeout=timeout,
+                env=self._env
+            )
+            if result.returncode != 0:
+                self.logger.warning(f"Cmd failed: {cmd} | Stderr: {result.stderr.strip()}")
+                return False
+            return True
+        except subprocess.TimeoutExpired:
+            self.logger.error(f"Timeout ({timeout}s) expired for: {cmd}")
+            return False
+        except subprocess.SubprocessError as e:
+            self.logger.error(f"Execution failed: {e}")
+            sys.exit(1)
+
+    def is_connected(self, target_host_alias: str, mac: str) -> bool:
+        runner = self._get_runner(target_host_alias)
+        cmd = runner + ["bluetoothctl", "info", mac]
+        
         try:
             result = subprocess.run(
                 cmd,
                 capture_output=True,
                 text=True,
-                timeout=timeout,
-                check=False
+                check=False,
+                timeout=5,
+                env=self._env
             )
-            if result.returncode != 0:
-                return ""
-            return result.stdout.strip()
+            return "Connected: yes" in result.stdout
         except subprocess.TimeoutExpired:
-            print(f"Timeout expired for command: {' '.join(cmd)}")
-            return ""
-        except FileNotFoundError:
-            print(f"Command not found: {cmd[0]}")
-            return ""
+            self.logger.warning(f"Timeout checking status on {target_host_alias}")
+            return False
+        except subprocess.SubprocessError:
+            return False
 
-    def is_connected_local(self, mac: str) -> bool:
-        output = self.run_command(["bluetoothctl", "info", mac])
-        return "Connected: yes" in output
+    def disconnect(self, target_host_alias: str, mac: str) -> bool:
+        self.logger.info(f"Disconnecting {mac} from {target_host_alias}...")
+        return self.run_bluetoothctl(target_host_alias, ["disconnect", mac], timeout=8)
 
-    def connect_local(self, mac: str) -> bool:
-        print(f"Connecting locally to {mac}...")
-        output = self.run_command(["bluetoothctl", "connect", mac], timeout=10)
-        return "Connection successful" in output
+    def connect(self, target_host_alias: str, mac: str) -> bool:
+        self.logger.info(f"Connecting {mac} to {target_host_alias}...")
+        return self.run_bluetoothctl(target_host_alias, ["connect", mac], timeout=15)
 
-    def disconnect_local(self, mac: str) -> bool:
-        print(f"Disconnecting locally from {mac}...")
-        output = self.run_command(["bluetoothctl", "disconnect", mac], timeout=5)
-        return "Successful disconnected" in output or "not available" in output
+app = App(name="bt-switch")
 
-    def connect_remote(self, host: str, mac: str) -> bool:
-        print(f"Triggering remote connect on {host}...")
-        cmd = [
-            "ssh",
-            "-o", "ConnectTimeout=2",
-            "-o", "StrictHostKeyChecking=no",
-            host,
-            "bluetoothctl", "connect", mac
-        ]
-        output = self.run_command(cmd, timeout=12)
-        return "Connection successful" in output
+@app.default
+def switch(target: str | None = None, device: str | None = None):
+    config_dir = user_config_path("bt_switch")
+    config_file = config_dir / "config.toml"
+    
+    if not config_file.exists():
+        logger.error(f"Configuration file not found at {config_file}")
+        sys.exit(1)
 
-    def disconnect_remote(self, host: str, mac: str) -> bool:
-        print(f"Triggering remote disconnect on {host}...")
-        cmd = [
-            "ssh",
-            "-o", "ConnectTimeout=2",
-            "-o", "StrictHostKeyChecking=no",
-            host,
-            "bluetoothctl", "disconnect", mac
-        ]
-        output = self.run_command(cmd, timeout=7)
-        return "Successful" in output or "not available" in output or output == ""
+    try:
+        with config_file.open("rb") as f:
+            data = tomllib.load(f)
+        config = AppConfig.model_validate(data)
+    except (ValidationError, tomllib.TOMLDecodeError) as e:
+        logger.error(f"Invalid configuration format: {e}")
+        sys.exit(1)
 
-class SwitchManager:
-    def __init__(self, service: BluetoothService):
-        self.service = service
-        self.hostname = socket.gethostname()
+    hostname = socket.gethostname()
+    
+    if hostname not in config.defaults:
+        logger.error(f"Current hostname '{hostname}' not configured in [defaults].")
+        sys.exit(1)
 
-    def determine_target(self, target_arg: str | None) -> str | None:
-        if target_arg:
-            return target_arg
-        return DEFAULT_PEERS.get(self.hostname)
+    defaults = config.defaults[hostname]
+    target_alias = target or defaults.default_target
+    device_alias = device or defaults.default_device
 
-    def execute(self, target_arg: str | None = None) -> None:
-        target = self.determine_target(target_arg)
+    if device_alias not in config.devices:
+        logger.error(f"Device '{device_alias}' not found in config.")
+        sys.exit(1)
+    
+    device_obj = config.devices[device_alias]
+    mac = device_obj.mac
+    
+    controller = BluetoothController(config)
+    
+    local_connected = controller.is_connected(hostname, mac)
+    
+    if local_connected:
+        logger.info(f"STATUS: {device_obj.name} is connected LOCALLY.")
+        logger.info(f"ACTION: Moving to {target_alias}.")
         
-        if not target:
-            print(f"Error: No default peer configured for '{self.hostname}' and no target specified.")
+        if controller.disconnect(hostname, mac):
+            if controller.connect(target_alias, mac):
+                logger.success(f"Successfully moved to {target_alias}")
+            else:
+                logger.error(f"Failed to connect to {target_alias}. Reconnecting locally...")
+                controller.connect(hostname, mac)
+    else:
+        logger.info(f"STATUS: {device_obj.name} is NOT connected locally.")
+        logger.info("ACTION: Pulling to LOCAL.")
+        
+        controller.disconnect(target_alias, mac)
+        
+        if controller.connect(hostname, mac):
+            logger.success("Successfully pulled to local machine.")
+        else:
+            logger.error("Failed to connect locally.")
             sys.exit(1)
 
-        print(f"Current Host: {self.hostname}")
-        print(f"Target Peer: {target}")
-
-        local_connected = self.service.is_connected_local(HEADPHONES_MAC)
-
-        if local_connected:
-            print(f"Status: Headphones connected locally. Action: PUSH to {target}.")
-            self.service.disconnect_local(HEADPHONES_MAC)
-            if target != "none":
-                self.service.connect_remote(target, HEADPHONES_MAC)
-        else:
-            print(f"Status: Headphones not connected locally. Action: PULL from {target}.")
-            if target != "none":
-                self.service.disconnect_remote(target, HEADPHONES_MAC)
-            self.service.connect_local(HEADPHONES_MAC)
-
-def main():
-    parser = argparse.ArgumentParser(description="Switch Bluetooth headphones between hosts.")
-    parser.add_argument("target", nargs="?", help="Target hostname to switch to/from")
-    args = parser.parse_args()
-
-    service = BluetoothService()
-    manager = SwitchManager(service)
-    
-    try:
-        manager.execute(args.target)
-    except KeyboardInterrupt:
-        sys.exit(130)
-
 if __name__ == "__main__":
-    main()
+    app()
