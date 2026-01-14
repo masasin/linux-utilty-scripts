@@ -7,6 +7,20 @@
 ## Terminal UIs
 - `convert-images`: Convert images from any format to png, jpeg, webp, or gif. Requires ImageMagick to be installed.
 
+## URI Protocols
+- `obsidian-silent`: Takes basic Obsidian `advanced-uri` commands and applies them via the Local REST API to avoid having Obsidian steal focus.
+  Add a desktop file pointing to `obsidian-silent`, then register it with `update-desktop-database ~/.local/share/applications`
+
+```toml
+[Desktop Entry]
+Name=Obsidian Silent
+Exec=/home/<username>/.local/bin/obsidian-silent %u
+Type=Application
+Terminal=false
+MimeType=x-scheme-handler/obsidian-silent;
+NoDisplay=true
+```
+
 ## Shell functions
 
 These functions need to be sourced into the `.profile` or `.bashrc` etc.
