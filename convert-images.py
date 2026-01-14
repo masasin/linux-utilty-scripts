@@ -16,7 +16,7 @@ from textual.app import App, ComposeResult
 from textual.containers import HorizontalGroup, Vertical
 from textual.events import Paste
 from textual.reactive import reactive
-from textual.widgets import Button, Footer, Header, RichLog, Select, Label
+from textual.widgets import Button, Footer, Header, Label, RichLog, Select
 from textual_fspicker import SelectDirectory
 
 

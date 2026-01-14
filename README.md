@@ -2,7 +2,7 @@
 
 - `run-or-raise`: Switch to an open window, or open the app if it's closed. Useful for keyboard shortcuts.
 - `extract-cover`: Extract the first page (e.g., cover letter) from a pdf, and save it as `filename_letter.pdf` or specify another suffix.
-- `dcr`: `run` a new docker container if it is not running, or `exec` into the running instance 
+- `dcr`: `run` a new docker container if it is not running, or `exec` into the running instance.
 - `bt-switch`: Switch Bluetooth devices between computers connected via SSH, such as on a local network or a Tailnet. Superseded by https://github.com/masasin/bt_switch.
 
   This needs to go in your `~/.config/bt_switch/config.toml`:

@@ -4,13 +4,14 @@
 #   "pytest",
 # ]
 # ///
-import sys
 import shlex
 import subprocess
+import sys
 from dataclasses import dataclass
-from typing import NoReturn, Optional
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
+
 import pytest
+
 
 @dataclass(frozen=True)
 class AppConfig:

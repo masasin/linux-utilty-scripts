@@ -15,13 +15,14 @@ import shlex
 import socket
 import subprocess
 import sys
-import tomllib
 from typing import Literal
 
+import tomllib
 from cyclopts import App
 from loguru import logger
 from platformdirs import user_config_path
 from pydantic import BaseModel, ValidationError
+
 
 class BtSwitchError(Exception):
     pass
@@ -261,7 +262,7 @@ def entry_point(target: str | None = None, device: str | None = None):
     except BtSwitchError as e:
         logger.error(str(e))
         sys.exit(1)
-    except Exception as e:
+    except Exception:
         logger.exception("Unexpected error")
         sys.exit(1)
 

@@ -8,9 +8,10 @@
 import argparse
 import re
 import sys
-import yaml
 from pathlib import Path
-from typing import Iterator, Any
+from typing import Any, Iterator
+
+import yaml
 
 # A more precise regex for inline tags.
 # It avoids matching tags within code blocks or URLs.
@@ -229,7 +230,7 @@ def main():
         )
         sys.exit(1)
 
-    print(f"\nExtraction complete.")
+    print("\nExtraction complete.")
     print(f"Found {len(tag_data)} unique tags.")
     print(f"Tag list has been saved to '{args.output}'")
 

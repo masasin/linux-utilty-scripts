@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-import sys
-import ssl
 import re
-import urllib.request
+import ssl
+import sys
 import urllib.parse
-from urllib.error import HTTPError, URLError
+import urllib.request
+from urllib.error import HTTPError
 
 API_KEY = "5b4292f14d050a0d5c3fbce2a9da3a4d7d1655e8c43ecec35d5d39536cb473ca"
 PORT = 27124
